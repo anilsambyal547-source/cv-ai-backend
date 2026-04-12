@@ -11,7 +11,8 @@ from passlib.context import CryptContext
 from config import config
 
 # Security setup
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Using pbkdf2_sha256 for better cross-platform compatibility than bcrypt in some environments
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # User database with hashed passwords
 # Note: In a real app these would be in a SQL DB.
