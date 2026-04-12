@@ -1,0 +1,14 @@
+{
+  "queries": [
+    {
+      "id": "q1",
+      "text": "python developer",
+      "relevant": ["example_0", "image-to-text_0"]
+    },
+    {
+      "id": "q2",
+      "text": "software engineer with docker",
+      "relevant": ["example_0"]
+    }
+  ]
+}

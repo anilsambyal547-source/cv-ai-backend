@@ -1,0 +1,34 @@
+# Standard Python ignores
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# CV AI Specific ignores
+.env
+.env.local
+data/
+chroma_db/
+cv_files/
+*.db
+token.json
+credentials.json
+*.log
+*.pickle
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Frontend (Since it has its own repo)
+cv-ai-frontend/
+
+# Root level node_modules (just in case)
+node_modules/
+.next/
+dist/
+build/

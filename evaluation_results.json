@@ -1,0 +1,38 @@
+{
+  "mrr": 1.0,
+  "precisions": {
+    "1": 1.0,
+    "3": 0.5,
+    "5": 0.30000000000000004,
+    "10": 0.15000000000000002
+  },
+  "recalls": {
+    "1": 0.75,
+    "3": 1.0,
+    "5": 1.0,
+    "10": 1.0
+  },
+  "detailed": [
+    {
+      "query_id": "q1",
+      "retrieved_ids": [
+        "example_0",
+        "image-to-text_0"
+      ],
+      "relevant_ids": [
+        "image-to-text_0",
+        "example_0"
+      ]
+    },
+    {
+      "query_id": "q2",
+      "retrieved_ids": [
+        "example_0",
+        "image-to-text_0"
+      ],
+      "relevant_ids": [
+        "example_0"
+      ]
+    }
+  ]
+}

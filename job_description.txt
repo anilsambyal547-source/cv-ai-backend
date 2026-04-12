@@ -1,0 +1,4 @@
+We are looking for a Python Developer with 3+ years of experience.
+Required skills: Python, FastAPI, Docker, PostgreSQL.
+Nice to have: AWS, Kubernetes.
+Bachelor's degree in Computer Science or equivalent.
