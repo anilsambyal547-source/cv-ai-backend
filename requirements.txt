@@ -18,3 +18,11 @@ redis
 email-validator
 cryptography
 scikit-learn
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+slowapi
+httpx
+gunicorn
