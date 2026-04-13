@@ -156,6 +156,7 @@ async def list_candidates(
             "industry":         meta.get("industry", ""),
             "skills":           meta.get("skills", ""),
             "skills_preview":   skills_preview,
+            "stage":            meta.get("stage", "Lead"),
             **quality,
         })
 
@@ -252,6 +253,7 @@ async def get_candidate(
         "certifications":   certifications,
         "document":         doc,
         "has_file":         bool(meta.get("file_path")),
+        "stage":            meta.get("stage", "Lead"),
         **quality,
     }
 
@@ -324,3 +326,42 @@ async def generate_candidate_insights(
         details={"candidate_id": candidate_id},
     )
     return insights
+
+
+@router.patch("/candidate/{candidate_id}/stage", summary="Update candidate recruitment stage")
+async def update_candidate_stage(
+    candidate_id: str,
+    body: dict,
+    user=Depends(get_current_active_user),
+):
+    """Updates the 'stage' metadata for a candidate."""
+    new_stage = body.get("stage")
+    if not new_stage:
+        raise HTTPException(status_code=400, detail="Missing 'stage' in request body")
+
+    valid_stages = ["Lead", "Shortlisted", "Outreach", "Applied", "Screening", "Interview", "On Hold", "Offer", "Rejected", "Hired", "Contacted"]
+    if new_stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {', '.join(valid_stages)}")
+
+    # Fetch existing metadata to ensure we don't lose other fields
+    result = vector_store.collection.get(ids=[candidate_id], include=["metadatas"])
+    if not result["ids"]:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    meta = dict(result["metadatas"][0])
+    meta["stage"] = new_stage
+
+    # Update ChromaDB
+    vector_store.collection.update(
+        ids=[candidate_id],
+        metadatas=[meta],
+    )
+
+    log_access(
+        user=user["username"],
+        action="UPDATE_CANDIDATE_STAGE",
+        resource="CANDIDATE",
+        details={"candidate_id": candidate_id, "stage": new_stage},
+    )
+
+    return {"message": "Candidate stage updated", "id": candidate_id, "stage": new_stage}

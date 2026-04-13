@@ -190,7 +190,32 @@ Open `http://localhost:3000`
 
 ---
 
-## Usage
+## Production Deployment
+
+### Backend (Gunicorn + Uvicorn)
+For production, use a production-grade server:
+```bash
+pip install gunicorn
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.api.main:app
+```
+
+### Frontend (Next.js Build)
+Always use the production build for better performance:
+```bash
+cd cv-ai-frontend
+npm run build
+npm run start
+```
+
+### Environment Checklist
+Ensure these variables are set in your production environment (e.g., Render/Vercel):
+- `GOOGLE_API_KEY`: Your Gemini API key.
+- `JWT_SECRET`: A long, random string.
+- `ENCRYPTION_KEY`: A Fernet-compatible key (use `cryptography.fernet.Fernet.generate_key()`).
+- `ALLOWED_ORIGINS`: Comma-separated list of your production domains.
+- `NEXT_PUBLIC_API_URL`: Your backend API URL (for the frontend build).
+
+---
 
 ### Ingest CVs
 

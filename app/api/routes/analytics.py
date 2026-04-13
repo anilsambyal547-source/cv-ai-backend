@@ -40,6 +40,7 @@ async def analytics_overview(user=Depends(get_current_active_user)):
 
         seniority_counter: Counter = Counter()
         industry_counter:  Counter = Counter()
+        stage_counter:     Counter = Counter()
         skill_counter:     Counter = Counter()
         cluster_totals:    dict    = defaultdict(float)
         total_exp = 0.0
@@ -52,6 +53,7 @@ async def analytics_overview(user=Depends(get_current_active_user)):
 
             seniority_counter[enriched.get("seniority", "unknown")] += 1
             industry_counter[enriched.get("industry",  "general")]  += 1
+            stage_counter[meta.get("stage", "Lead")]                += 1
 
             skills_raw = meta.get("skills", "") or ""
             skills = [s.strip() for s in skills_raw.split(",") if s.strip()]
@@ -73,6 +75,7 @@ async def analytics_overview(user=Depends(get_current_active_user)):
             "avg_experience":       round(total_exp / n, 1),
             "seniority_dist":       dict(seniority_counter.most_common()),
             "industry_dist":        dict(industry_counter.most_common()),
+            "stage_dist":           dict(stage_counter.most_common()),
             "top_skills":           [{"skill": s, "count": c} for s, c in skill_counter.most_common(20)],
             "cluster_dist":         {k: round(v / n, 2) for k, v in sorted(cluster_totals.items(), key=lambda x: x[1], reverse=True)},
             "experience_histogram": [{"range": k, "count": v} for k, v in exp_buckets.items()],
