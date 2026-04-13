@@ -13,7 +13,7 @@ class VectorStore:
     def __init__(self):
         self.db_path = Path(config.CHROMA_DB_DIR)
         # Debug print (can be removed later)
-        print(f"🔧 Chroma DB path: {self.db_path}")
+        print(f"Chroma DB path: {self.db_path}")
         self.db_path.mkdir(parents=True, exist_ok=True)
 
         self.client = chromadb.PersistentClient(

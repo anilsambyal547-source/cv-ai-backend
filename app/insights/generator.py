@@ -31,7 +31,7 @@ def get_working_model(client) -> str:
     if config.PREFERRED_MODEL:
         try:
             client.models.get(model=config.PREFERRED_MODEL)
-            logger.info(f"✅ Using preferred model: {config.PREFERRED_MODEL}")
+            logger.info(f"[OK] Using preferred model: {config.PREFERRED_MODEL}")
             _WORKING_MODEL = config.PREFERRED_MODEL
             return _WORKING_MODEL
         except Exception:
@@ -51,7 +51,7 @@ def get_working_model(client) -> str:
             try:
                 m = client.models.get(model=model_id)
                 if "generateContent" in m.supported_actions:
-                    logger.info(f"✅ Using model: {model_id}")
+                    logger.info(f"[OK] Using model: {model_id}")
                     _WORKING_MODEL = model_id
                     return _WORKING_MODEL
             except Exception:
@@ -62,13 +62,13 @@ def get_working_model(client) -> str:
             if any(x in name for x in ["audio", "image", "vision", "tts", "er-"]):
                 continue
             if "generateContent" in m.supported_actions:
-                logger.info(f"✅ Using fallback model: {name}")
+                logger.info(f"[OK] Using fallback model: {name}")
                 _WORKING_MODEL = name
                 return _WORKING_MODEL
     except Exception as e:
         logger.error(f"Model discovery error: {e}")
 
-    raise RuntimeError("❌ No suitable Gemini model found. Check API key and quota.")
+    raise RuntimeError("[ERROR] No suitable Gemini model found. Check API key and quota.")
 
 def _repair_json(raw: str) -> Optional[str]:
     """
