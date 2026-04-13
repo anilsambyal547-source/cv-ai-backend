@@ -1,5 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.0+cpu
+torch
 google-genai>=1.7.0
 PyMuPDF>=1.27.2
 chromadb>=0.6.0
