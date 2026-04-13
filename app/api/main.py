@@ -1,6 +1,6 @@
 """
 FastAPI main application with JWT auth and rate limiting.
-Universal Handshake Mode: Optimized for maximum reachability on Render Free Tier.
+Golden Bridge Mode: Explicit whitelisting for stable Vercel connectivity.
 """
 import os
 from datetime import timedelta
@@ -20,22 +20,35 @@ os.environ["TORCH_NUM_THREADS"] = "1"
 
 app = FastAPI(title="CV AI API", version="1.0.0")
 
-# 1. Health check (Absolute bare minimum)
+# 1. Health check
 @app.get("/health", tags=["health"])
 async def health_check():
     return {"status": "ok"}
 
-# 2. Universal Handshake Mode
-# Allowing all origins "*" temporarily to bypass dashboard configuration errors
+# 2. Golden Bridge CORS Configuration
+# Explicitly whitelist the Vercel domain to allow Authorization headers
+_ALLOWED_ORIGINS = [
+    "https://cvsai.vercel.app",
+    "https://cvsai.vercel.app/",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Dynamically add from Env if present
+raw_env_origins = os.getenv("ALLOWED_ORIGINS", "")
+if raw_env_origins:
+    _ALLOWED_ORIGINS.extend([o.strip().rstrip("/") for o in raw_env_origins.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=False, # Must be False when using origins=["*"]
-    allow_methods=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True, # Now Safe because we use explicit origins
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# 3. Fast Login (Bypasses hashing overhead for stability on 512MB RAM)
+# 3. Fast Login
 @app.post("/token", response_model=dict, tags=["authentication"])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     from . import auth
