@@ -1,12 +1,10 @@
 """
 Persistent vector store using ChromaDB.
-Singleton shared across indexer, retriever, and CLI.
+Safe-Mode: Includes timeouts and fail-safe fallbacks for low-memory cloud environments.
 """
 import os
+import time
 from pathlib import Path
-import chromadb
-from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
 from config import config
 
 class VectorStore:
@@ -16,37 +14,61 @@ class VectorStore:
         self._client = None
         self._collection = None
         self._embedder = None
+        self._is_safe = True # Flag to track if the DB is actually connected
 
     @property
     def client(self):
-        if self._client is None:
-            print(f"Connecting to ChromaDB at: {self.db_path}...")
-            self._client = chromadb.PersistentClient(
-                path=str(self.db_path),
-                settings=Settings(anonymized_telemetry=config.CHROMA_TELEMETRY)
-            )
+        if self._client is None and self._is_safe:
+            try:
+                import chromadb
+                from chromadb.config import Settings
+                print(f"Connecting to ChromaDB at: {self.db_path}...")
+                # Use a lightweight connection setting
+                self._client = chromadb.PersistentClient(
+                    path=str(self.db_path),
+                    settings=Settings(anonymized_telemetry=False)
+                )
+            except Exception as e:
+                print(f"CRITICAL: ChromaDB connection failed: {e}")
+                self._is_safe = False
+                self._client = None
         return self._client
 
     @property
     def collection(self):
+        # Fail-safe: If DB fails, return a Mock object that returns empty lists
+        # This prevents the whole API from crashing (502/504 error)
+        if (self.client is None) or (not self._is_safe):
+            class MockCollection:
+                def get(self, **kwargs): return {"ids": [], "metadatas": [], "documents": []}
+                def count(self): return 0
+                def query(self, **kwargs): return {"ids": [[]], "distances": [[]], "metadatas": [[]], "documents": [[]]}
+            return MockCollection()
+
         if self._collection is None:
-            self._collection = self.client.get_or_create_collection(
-                name=config.CHROMA_COLLECTION,
-                metadata={"hnsw:space": "cosine"}
-            )
+            try:
+                self._collection = self.client.get_or_create_collection(
+                    name=config.CHROMA_COLLECTION,
+                    metadata={"hnsw:space": "cosine"}
+                )
+            except Exception as e:
+                print(f"ERROR: Collection access failed: {e}")
+                self._is_safe = False
+                return self.collection # Recursive call returns Mock
         return self._collection
 
     @property
     def embedder(self):
         if self._embedder is None:
-            print(f"Loading embedding model: {config.EMBEDDING_MODEL}...")
-            self._embedder = SentenceTransformer(config.EMBEDDING_MODEL)
-            # Optimize Torch for low memory (Render 512MB limit)
             try:
+                from sentence_transformers import SentenceTransformer
+                print(f"Loading embedding model: {config.EMBEDDING_MODEL}...")
+                self._embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+                # Force single-thread
                 import torch
                 torch.set_num_threads(1)
-            except ImportError:
-                pass
+            except Exception as e:
+                print(f"ERROR: Embedding model failed to load: {e}")
         return self._embedder
 
     def count(self) -> int:

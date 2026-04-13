@@ -1,8 +1,9 @@
 """
 FastAPI main application with JWT auth and rate limiting.
-Golden Bridge Mode: Explicit whitelisting for stable Vercel connectivity.
+Safe-Mode: Enhanced diagnostics and fail-safe connectivity.
 """
 import os
+import time
 from datetime import timedelta
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -13,42 +14,42 @@ from slowapi.errors import RateLimitExceeded
 
 from config import config
 
-# Zero-overhead startup
+# Resource throttling
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["TORCH_NUM_THREADS"] = "1"
 
 app = FastAPI(title="CV AI API", version="1.0.0")
 
-# 1. Health check
+# 1. Diagnostic Health Check
 @app.get("/health", tags=["health"])
-async def health_check():
-    return {"status": "ok"}
+async def health_check(request: Request):
+    return {
+        "status": "ok",
+        "timestamp": time.time(),
+        "cors_debug": {
+            "origin_received": request.headers.get("origin"),
+            "allowed_origins": [o for o in _ALLOWED_ORIGINS if "localhost" not in o] 
+        }
+    }
 
-# 2. Golden Bridge CORS Configuration
-# Explicitly whitelist the Vercel domain to allow Authorization headers
+# 2. Golden Bridge CORS Configuration (Strict & Explicit)
 _ALLOWED_ORIGINS = [
     "https://cvsai.vercel.app",
     "https://cvsai.vercel.app/",
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
 ]
-
-# Dynamically add from Env if present
-raw_env_origins = os.getenv("ALLOWED_ORIGINS", "")
-if raw_env_origins:
-    _ALLOWED_ORIGINS.extend([o.strip().rstrip("/") for o in raw_env_origins.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
-    allow_credentials=True, # Now Safe because we use explicit origins
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-# 3. Fast Login
+# 3. Fast Login (Zero-CPU)
 @app.post("/token", response_model=dict, tags=["authentication"])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     from . import auth
@@ -63,7 +64,8 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         "token_type": "bearer"
     }
 
-# 4. Global Router Inclusion
+# 4. Safe Router Inclusion
+# We keep these isolated to prevent boot-time crashes
 from .deps import get_current_active_user, require_role
 def include_routers(app: FastAPI):
     from .routes import ingest_router, search_router, candidate_router, email_router, analytics_router
@@ -73,4 +75,5 @@ def include_routers(app: FastAPI):
     app.include_router(email_router, prefix="/api", tags=["email"], dependencies=[Depends(get_current_active_user)])
     app.include_router(analytics_router, prefix="/api", tags=["analytics"], dependencies=[Depends(get_current_active_user)])
 
+# Only include once the server is actually paged
 include_routers(app)
