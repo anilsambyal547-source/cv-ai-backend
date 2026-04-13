@@ -13,17 +13,28 @@ class VectorStore:
     def __init__(self):
         self.db_path = Path(config.CHROMA_DB_DIR)
         self.db_path.mkdir(parents=True, exist_ok=True)
-
-        self.client = chromadb.PersistentClient(
-            path=str(self.db_path),
-            settings=Settings(anonymized_telemetry=config.CHROMA_TELEMETRY)
-        )
-
-        self.collection = self.client.get_or_create_collection(
-            name=config.CHROMA_COLLECTION,
-            metadata={"hnsw:space": "cosine"}
-        )
+        self._client = None
+        self._collection = None
         self._embedder = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            print(f"Connecting to ChromaDB at: {self.db_path}...")
+            self._client = chromadb.PersistentClient(
+                path=str(self.db_path),
+                settings=Settings(anonymized_telemetry=config.CHROMA_TELEMETRY)
+            )
+        return self._client
+
+    @property
+    def collection(self):
+        if self._collection is None:
+            self._collection = self.client.get_or_create_collection(
+                name=config.CHROMA_COLLECTION,
+                metadata={"hnsw:space": "cosine"}
+            )
+        return self._collection
 
     @property
     def embedder(self):
