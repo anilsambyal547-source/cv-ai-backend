@@ -1,12 +1,10 @@
 """
 Search and match endpoints.
+Optimized for lazy-loading to save memory.
 """
-from typing import Optional, List, Dict, Any, Set
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Depends, Query
 
-from app.retrieval.retriever import HybridCVRetriever
-from app.storage.vector_store import vector_store
-from app.jd_parser import parse_job_description
 from app.api.deps import get_current_active_user
 from app.utils.audit import log_access
 from config import config
@@ -19,14 +17,20 @@ _retriever = None
 def get_retriever():
     global _retriever
     if _retriever is None:
-        # Use same retriever as CLI
+        # Import heavy modules inside to save startup RAM
+        from app.retrieval.retriever import HybridCVRetriever
+        from app.storage.vector_store import vector_store
         from sentence_transformers import CrossEncoder
+        
         cross_encoder = None
         try:
+            # Only load CrossEncoder if strictly needed
+            print(f"Loading CrossEncoder: {config.CROSS_ENCODER_MODEL}...")
             cross_encoder = CrossEncoder(config.CROSS_ENCODER_MODEL)
-        except Exception:
-            pass
-        # Attempt Redis only if configured (short timeout)
+        except Exception as e:
+            print(f"CrossEncoder load failed (using fallback): {e}")
+
+        # Attempt Redis only if configured
         redis_client = None
         if config.REDIS_HOST and config.REDIS_HOST not in ("localhost", "redis"):
             try:
@@ -37,12 +41,12 @@ def get_retriever():
                     db=config.REDIS_DB,
                     password=config.REDIS_PASSWORD,
                     socket_connect_timeout=2,
-                    socket_timeout=2,
                     decode_responses=False,
                 )
                 redis_client.ping()
             except Exception:
                 redis_client = None
+
         _retriever = HybridCVRetriever(
             collection=vector_store.collection,
             embedder=vector_store.embedder,
@@ -50,6 +54,7 @@ def get_retriever():
             cross_encoder=cross_encoder,
             redis_client=redis_client,
         )
+        # BM25 also builds lazily if needed
         _retriever.build_bm25_index()
     return _retriever
 
@@ -64,7 +69,6 @@ async def search(
     boolean: Optional[str] = Query(None, description="Boolean expression (e.g., python AND docker)"),
     user = Depends(get_current_active_user),
 ) -> List[Dict[str, Any]]:
-    """Hybrid search with optional filters. Accessible by any authenticated user."""
     filter_skills_set = None
     if filter_skills:
         filter_skills_set = {s.strip() for s in filter_skills.split(',') if s.strip()}
@@ -83,18 +87,7 @@ async def search(
         expand_query=True,
     )
 
-    # Log audit event
-    log_access(
-        user=user["username"],
-        action="SEARCH",
-        resource="QUERY",
-        details={
-            "query": query,
-            "limit": limit,
-            "result_count": len(results),
-        }
-    )
-
+    log_access(user["username"], "SEARCH", "QUERY", {"query": query, "limit": limit, "results": len(results)})
     return results
 
 @router.post("/match", summary="Match candidates to a job description")
@@ -103,7 +96,7 @@ async def match(
     limit: int = Query(10, ge=1, le=100),
     user = Depends(get_current_active_user),
 ) -> List[Dict[str, Any]]:
-    """Parse job description and return ranked candidates."""
+    from app.jd_parser import parse_job_description
     parsed = parse_job_description(jd_text)
     skill_priority = {skill: 1.0 for skill in parsed['skills']} if parsed['skills'] else None
 
@@ -119,16 +112,5 @@ async def match(
         use_rerank=True,
     )
 
-    # Log audit event
-    log_access(
-        user=user["username"],
-        action="MATCH",
-        resource="JOB_DESCRIPTION",
-        details={
-            "jd_length": len(jd_text),
-            "skills_found": list(parsed['skills']),
-            "result_count": len(results),
-        }
-    )
-
+    log_access(user["username"], "MATCH", "JOB_DESCRIPTION", {"skills": list(parsed['skills']), "results": len(results)})
     return results

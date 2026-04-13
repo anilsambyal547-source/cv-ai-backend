@@ -1,9 +1,9 @@
 """
 FastAPI main application with JWT auth and rate limiting.
-Includes role‑based access control (admin/recruiter).
+Optimized for low-memory environments (Render 512MB).
 """
 import os
-# Optimize for low-memory environments (Render Free Tier 512MB)
+# Force torch to be single-threaded and memory-efficient
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["TORCH_NUM_THREADS"] = "1"
@@ -17,9 +17,6 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import logging
 
-from . import auth
-from .deps import get_current_active_user, require_role
-from .routes import ingest_router, search_router, candidate_router, email_router, analytics_router
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -30,8 +27,12 @@ app = FastAPI(title="CV AI API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# 1. Health check first (No heavy imports allowed here)
+@app.get("/health", tags=["health"])
+async def health_check():
+    return {"status": "ok"}
+
 # CORS — dynamic origins for production readiness
-import os
 _ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
 
 app.add_middleware(
@@ -42,40 +43,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
-app.include_router(
-    ingest_router,
-    prefix="/api",
-    tags=["ingestion"],
-    dependencies=[Depends(require_role("admin"))],
-)
-app.include_router(
-    search_router,
-    prefix="/api",
-    tags=["search"],
-    dependencies=[Depends(get_current_active_user)],
-)
-app.include_router(
-    candidate_router,
-    prefix="/api",
-    tags=["candidates"],
-    dependencies=[Depends(get_current_active_user)],
-)
-app.include_router(
-    email_router,
-    prefix="/api",
-    tags=["email"],
-    dependencies=[Depends(get_current_active_user)],
-)
-app.include_router(
-    analytics_router,
-    prefix="/api",
-    tags=["analytics"],
-    dependencies=[Depends(get_current_active_user)],
-)
+# 2. Lazy Router Inclusion
+# We import routes INSIDE a wrapper or just before inclusion
+# to prevent memory spikes during the boot sequence.
 
 @app.post("/token", response_model=dict, tags=["authentication"])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    from . import auth
     user = auth.authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -90,6 +64,48 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/health", tags=["health"])
-async def health_check():
-    return {"status": "ok"}
+# Ingest Router
+from .deps import get_current_active_user, require_role
+def include_routers(app: FastAPI):
+    # Lazy imports for routers
+    from .routes import (
+        ingest_router,
+        search_router,
+        candidate_router,
+        email_router,
+        analytics_router
+    )
+    
+    app.include_router(
+        ingest_router,
+        prefix="/api",
+        tags=["ingestion"],
+        dependencies=[Depends(require_role("admin"))],
+    )
+    app.include_router(
+        search_router,
+        prefix="/api",
+        tags=["search"],
+        dependencies=[Depends(get_current_active_user)],
+    )
+    app.include_router(
+        candidate_router,
+        prefix="/api",
+        tags=["candidates"],
+        dependencies=[Depends(get_current_active_user)],
+    )
+    app.include_router(
+        email_router,
+        prefix="/api",
+        tags=["email"],
+        dependencies=[Depends(get_current_active_user)],
+    )
+    app.include_router(
+        analytics_router,
+        prefix="/api",
+        tags=["analytics"],
+        dependencies=[Depends(get_current_active_user)],
+    )
+
+# Include them now (this still happens at startup but is more controlled)
+include_routers(app)
