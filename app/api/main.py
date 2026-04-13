@@ -3,6 +3,9 @@ FastAPI main application with JWT auth and rate limiting.
 Optimized for low-memory environments (Render 512MB).
 """
 import os
+import logging
+from datetime import timedelta
+
 # Force torch to be single-threaded and memory-efficient
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -11,14 +14,14 @@ os.environ["TORCH_NUM_THREADS"] = "1"
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import timedelta
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import logging
 
 from config import config
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Rate limiter setup
@@ -27,13 +30,18 @@ app = FastAPI(title="CV AI API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# 1. Health check first (No heavy imports allowed here)
+# 1. Health check first
 @app.get("/health", tags=["health"])
 async def health_check():
     return {"status": "ok"}
 
-# CORS — dynamic origins for production readiness
-_ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+# 2. Hardened CORS Configuration
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+# Clean origins: strip spaces and trailing slashes to prevent handshake failures
+_ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in raw_origins.split(",") if o.strip()]
+
+# Log allowed origins for debugging
+print(f"DEBUG: CORS origins configured: {_ALLOWED_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,10 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. Lazy Router Inclusion
-# We import routes INSIDE a wrapper or just before inclusion
-# to prevent memory spikes during the boot sequence.
-
+# 3. Login Endpoint
 @app.post("/token", response_model=dict, tags=["authentication"])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     from . import auth
@@ -64,10 +69,9 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Ingest Router
+# 4. Lazy Router Inclusion
 from .deps import get_current_active_user, require_role
 def include_routers(app: FastAPI):
-    # Lazy imports for routers
     from .routes import (
         ingest_router,
         search_router,
@@ -76,36 +80,10 @@ def include_routers(app: FastAPI):
         analytics_router
     )
     
-    app.include_router(
-        ingest_router,
-        prefix="/api",
-        tags=["ingestion"],
-        dependencies=[Depends(require_role("admin"))],
-    )
-    app.include_router(
-        search_router,
-        prefix="/api",
-        tags=["search"],
-        dependencies=[Depends(get_current_active_user)],
-    )
-    app.include_router(
-        candidate_router,
-        prefix="/api",
-        tags=["candidates"],
-        dependencies=[Depends(get_current_active_user)],
-    )
-    app.include_router(
-        email_router,
-        prefix="/api",
-        tags=["email"],
-        dependencies=[Depends(get_current_active_user)],
-    )
-    app.include_router(
-        analytics_router,
-        prefix="/api",
-        tags=["analytics"],
-        dependencies=[Depends(get_current_active_user)],
-    )
+    app.include_router(ingest_router, prefix="/api", tags=["ingestion"], dependencies=[Depends(require_role("admin"))])
+    app.include_router(search_router, prefix="/api", tags=["search"], dependencies=[Depends(get_current_active_user)])
+    app.include_router(candidate_router, prefix="/api", tags=["candidates"], dependencies=[Depends(get_current_active_user)])
+    app.include_router(email_router, prefix="/api", tags=["email"], dependencies=[Depends(get_current_active_user)])
+    app.include_router(analytics_router, prefix="/api", tags=["analytics"], dependencies=[Depends(get_current_active_user)])
 
-# Include them now (this still happens at startup but is more controlled)
 include_routers(app)
