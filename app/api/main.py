@@ -2,6 +2,12 @@
 FastAPI main application with JWT auth and rate limiting.
 Includes role‑based access control (admin/recruiter).
 """
+import os
+# Optimize for low-memory environments (Render Free Tier 512MB)
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["TORCH_NUM_THREADS"] = "1"
+
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware

@@ -37,31 +37,24 @@ from app.industry_detector import detect_industry
 
 logger = logging.getLogger(__name__)
 
-# Load spaCy model only if available
-nlp = None
-if SPACY_AVAILABLE:
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        logger.warning("spaCy model not found. Run: python -m spacy download en_core_web_sm")
-    except Exception as e:
-        logger.warning(f"spaCy loading failed: {e}")
-else:
-    logger.info("spaCy not installed – name extraction will use fallback only.")
+# Load spaCy model only if available (Lazy Loading)
+_nlp = None
 
-# ----------------------------------------------------------------------
-# Deterministic extraction helpers
-# ----------------------------------------------------------------------
-def extract_email(text: str) -> str:
-    match = re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", text)
-    return match.group(0) if match else ""
-
-def extract_phone(text: str) -> str:
-    pattern = r"(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}"
-    match = re.search(pattern, text)
-    return match.group(0) if match else ""
+def get_nlp():
+    global _nlp
+    if not SPACY_AVAILABLE:
+        return None
+    if _nlp is None:
+        try:
+            _nlp = spacy.load("en_core_web_sm")
+        except (OSError, Exception):
+            # Silent fallback – use deterministic logic only
+            logger.info("spaCy model 'en_core_web_sm' not found. Falling back to deterministic extraction.")
+            return None
+    return _nlp
 
 def extract_name_with_spacy(text: str) -> str:
+    nlp = get_nlp()
     if nlp is None:
         return ""
     doc = nlp(text[:2000])

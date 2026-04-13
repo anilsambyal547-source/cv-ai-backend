@@ -12,8 +12,6 @@ from config import config
 class VectorStore:
     def __init__(self):
         self.db_path = Path(config.CHROMA_DB_DIR)
-        # Debug print (can be removed later)
-        print(f"Chroma DB path: {self.db_path}")
         self.db_path.mkdir(parents=True, exist_ok=True)
 
         self.client = chromadb.PersistentClient(
@@ -25,7 +23,20 @@ class VectorStore:
             name=config.CHROMA_COLLECTION,
             metadata={"hnsw:space": "cosine"}
         )
-        self.embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+        self._embedder = None
+
+    @property
+    def embedder(self):
+        if self._embedder is None:
+            print(f"Loading embedding model: {config.EMBEDDING_MODEL}...")
+            self._embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+            # Optimize Torch for low memory (Render 512MB limit)
+            try:
+                import torch
+                torch.set_num_threads(1)
+            except ImportError:
+                pass
+        return self._embedder
 
     def count(self) -> int:
         return self.collection.count()

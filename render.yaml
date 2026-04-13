@@ -2,9 +2,11 @@ services:
   - type: web
     name: cv-ai-backend
     env: python
-    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
-    startCommand: gunicorn app.api.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt && (python -m spacy download en_core_web_sm || echo "spaCy download failed, fallback will be used")
+    startCommand: gunicorn app.api.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     envVars:
+      - key: WEB_CONCURRENCY
+        value: "1"
       - key: GOOGLE_API_KEY
         sync: false
       - key: JWT_SECRET
