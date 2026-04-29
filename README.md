@@ -1,4 +1,6 @@
-# 🤖 CV AI Platform
+![CV AI Platform Banner](assets/images/banner.png)
+
+#  CV AI Platform
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -7,6 +9,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 **CV AI Platform** is a next-generation recruitment intelligence system. It transforms messy PDF resumes into structured, searchable data using Gemini Pro, provides deep semantic search via vector embeddings, and offers a premium, glassmorphic dashboard for candidate pipeline management.
+
+---
+
+## 📺 Visuals
+
+### Platform Walkthrough
+![CV AI Platform Demo](assets/images/demo.webp)
+
 
 ---
 
