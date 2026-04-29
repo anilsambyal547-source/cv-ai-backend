@@ -1,299 +1,183 @@
-# CV AI — Intelligent Recruiter Platform
+# 🤖 CV AI Platform
 
-A full-stack AI-powered recruitment platform that extracts, indexes, and intelligently matches candidates from PDF CVs. Built with Next.js 16 and FastAPI.
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-white?style=for-the-badge&logo=chroma)](https://www.trychroma.com/)
+[![Gemini](https://img.shields.io/badge/Gemini-blue?style=for-the-badge&logo=google-gemini)](https://deepmind.google/technologies/gemini/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
----
-
-## Features
-
-**CV Ingestion**
-- Drag & drop PDF upload with duplicate detection
-- AI extraction via Google Gemini (name, skills, experience, education, work history)
-- SHA-256 hash deduplication — never indexes the same CV twice
-- Quality scoring (excellent / good / fair / poor) per candidate
-- Flags bad extractions automatically
-
-**Candidate Search**
-- Natural language hybrid search (semantic + keyword)
-- Filters: skills, experience, education, seniority, boolean query
-- AI fit score per candidate
-- Fit breakdown bars (technical, experience, skills)
-- Missing skills detection
-
-**Candidate Profiles**
-- Full profile with work experience timeline
-- Education, certifications, skills
-- Capability radar chart
-- AI insights via Gemini: summary, strengths, weaknesses, interview questions
-- Similar candidates panel
-
-**Analytics**
-- Gap Analysis: your candidate pool vs. job requisitions
-- Pipeline Health: supply vs. demand by seniority
-- Skill distribution radar and ranked list
-- Industry breakdown pie and bar charts
-- Interactive tech clusters — click to search or export to outreach
-- Global filter bar: date range, target role, location, remote status
-- CSV export
-
-**Outreach & Email**
-- Shortlist candidates from search or candidates page
-- Bulk email with personalisation ({name}, {skills})
-- 10 professional email templates
-- CC / BCC fields, email signature, schedule send
-- Draft saving, live preview per recipient
-- Gmail OAuth2 integration — real email delivery
-
-**UX**
-- Cmd+K command palette
-- Page transitions (fade/slide)
-- Collapsible sidebar
-- Mobile responsive (hamburger drawer)
-- Tooltips on all icons
-- Dark / light mode
-- Glassmorphism design system
+**CV AI Platform** is a next-generation recruitment intelligence system. It transforms messy PDF resumes into structured, searchable data using Gemini Pro, provides deep semantic search via vector embeddings, and offers a premium, glassmorphic dashboard for candidate pipeline management.
 
 ---
 
-## Tech Stack
-
-| Layer       | Technology                                      |
-|-------------|------------------------------------------------|
-| Frontend    | Next.js 16, TypeScript, Tailwind CSS           |
-| Components  | shadcn/ui, Framer Motion, Recharts             |
-| State       | Zustand (shortlist), React hooks               |
-| Backend     | FastAPI, Python 3.11                           |
-| AI          | Google Gemini (extraction + insights)          |
-| Embeddings  | sentence-transformers/all-MiniLM-L6-v2         |
-| Vector DB   | ChromaDB                                       |
-| Email       | Gmail API (OAuth2)                             |
-| Auth        | JWT (HS256)                                    |
+## 📖 Table of Contents
+- [Key Features](#-key-features)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Usage Guide](#-usage-guide)
+- [API Reference](#-api-reference)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## Project Structure
+## ✨ Key Features
 
-```
-cv_ai/
-├── app/
-│   ├── api/
-│   │   ├── auth.py              # JWT auth
-│   │   ├── deps.py              # Auth dependencies
-│   │   ├── main.py              # FastAPI app
-│   │   └── routes/
-│   │       ├── ingest.py        # CV upload + duplicate detection
-│   │       ├── search.py        # Hybrid search
-│   │       ├── candidate.py     # Candidate CRUD + insights
-│   │       ├── analytics.py     # Analytics endpoints
-│   │       └── email.py         # Email send + schedule
-│   ├── email/
-│   │   ├── sender.py            # Gmail API sender
-│   │   └── tracker.py           # SQLite email history
-│   ├── ingest/
-│   │   ├── extractor.py         # Gemini + rule-based extraction
-│   │   ├── indexer.py           # ChromaDB indexing
-│   │   └── parser.py            # PDF parsing (pymupdf)
-│   ├── insights/
-│   │   └── generator.py         # Gemini insights generation
-│   ├── storage/
-│   │   └── vector_store.py      # ChromaDB singleton
-│   ├── utils/
-│   │   ├── encryption.py        # Fernet email encryption
-│   │   └── audit.py             # Audit logging
-│   └── analytics.py             # Intelligence functions
-├── config.py
-├── main.py                      # CLI entry point
-└── .env
+### 📂 Intelligent Ingestion
+- **Automated Extraction**: Uses Gemini Pro to extract structured data (Experience, Skills, Education) from any PDF.
+- **Duplicate Detection**: SHA-256 hashing ensures no redundant candidate entries.
+- **Background Processing**: FastAPI background tasks handle heavy lifting without blocking the UI.
 
-cv-ai-frontend/
-├── src/
-│   ├── app/
-│   │   ├── (auth)/login/
-│   │   └── (dashboard)/
-│   │       ├── layout.tsx       # Sidebar + Topbar + Cmd+K
-│   │       ├── page.tsx         # Dashboard
-│   │       ├── upload/          # CV Upload
-│   │       ├── candidates/      # Candidates list + [id] profile
-│   │       ├── search/          # Search page
-│   │       ├── outreach/        # Shortlist + email
-│   │       ├── analytics/       # Analytics
-│   │       └── settings/        # Settings
-│   ├── components/
-│   │   ├── layout/              # Sidebar, Topbar, CommandPalette
-│   │   ├── dashboard/           # MetricCard, Charts, etc.
-│   │   ├── search/              # SearchBar, FilterSidebar, CandidateCard
-│   │   └── outreach/            # EmailModal, ShortlistCard
-│   ├── hooks/                   # useDashboard, useSearch, useCandidate, etc.
-│   ├── services/                # API clients
-│   ├── stores/                  # Zustand stores
-│   └── types/                   # TypeScript types
+### 🔍 Semantic Search & Retrieval
+- **Vector Search**: Search by intent, not just keywords (powered by ChromaDB and Sentence Transformers).
+- **Hybrid Scoring**: Combines vector similarity with metadata filtering (Role, Seniority, Industry).
+- **Candidate Scoring**: AI-driven match percentages based on job descriptions.
+
+### 📊 Advanced Dashboard
+- **Pipeline Management**: Drag-and-drop candidate stages (Applied, Interview, Hired) using `@dnd-kit`.
+- **Real-time Analytics**: Interactive charts showing talent distribution and seniority trends using `Recharts`.
+- **Proximity UI**: iOS-style glassmorphic design with spring-animated interactions.
+
+### 🔐 Enterprise Security
+- **JWT Authentication**: Secure login with role-based access control (Admin vs. Recruiter).
+- **Audit Logging**: Every action (ingestion, search, deletion) is tracked.
+- **Rate Limiting**: Protects endpoints from abuse using `slowapi`.
+
+---
+
+## 🏗 Architecture
+
+```mermaid
+graph TD
+    A[Frontend: Next.js] -->|JWT Auth| B[Backend: FastAPI]
+    B -->|Extract| C[Gemini Pro API]
+    B -->|Store Docs| D[(ChromaDB Vector Store)]
+    B -->|Files| E[Local Storage/data/cv_files]
+    B -->|Search| D
+    B -->|Embeddings| F[Sentence Transformers]
 ```
 
 ---
 
-## Setup
+## 🛠 Tech Stack
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- Google Cloud project with Gemini API enabled
-- Gmail API credentials (for email)
+### Frontend
+- **Framework**: Next.js 16 (App Router)
+- **State Management**: Zustand & TanStack Query
+- **Styling**: Tailwind CSS + Shadcn/UI
+- **Animations**: Framer Motion
+- **Form Handling**: React Hook Form + Zod
 
 ### Backend
+- **Core**: FastAPI (Python 3.10+)
+- **AI/LLM**: Google Gemini Pro (google-genai)
+- **Vector DB**: ChromaDB
+- **NLP**: Spacy + PyMuPDF
+- **Embeddings**: Sentence-Transformers (all-MiniLM-L6-v2)
 
+---
+
+## 🚀 Installation
+
+### 1. Clone the Repository
 ```bash
-cd cv_ai
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
+git clone https://github.com/your-username/cv-ai.git
+cd cv-ai
+```
 
+### 2. Backend Setup
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-Create `.env`:
-```env
-GOOGLE_API_KEY=your_gemini_api_key
-PREFERRED_MODEL=gemini-3.1-flash-lite-preview
-SECRET_KEY=your_jwt_secret_key
-ENCRYPTION_KEY=your_fernet_key
-EMAIL_TRACKER_DB=email_tracker.db
-```
-
-Authenticate Gmail:
-```bash
-python -c "
-from app.email.sender import get_sender
-from config import config
-sender = get_sender(config.CREDENTIALS_PATH, config.TOKEN_PATH)
-sender.authenticate()
-print('Gmail authenticated!')
-"
-```
-
-Start backend:
-```bash
-python -m uvicorn app.api.main:app --reload --port 8000
-```
-
-### Frontend
-
+### 3. Frontend Setup
 ```bash
 cd cv-ai-frontend
 npm install
-npm run dev
 ```
-
-Open `http://localhost:3000`
-
-**Default credentials:** `admin` / `secret`
 
 ---
 
-## Production Deployment
+## ⚙️ Configuration
 
-### Backend (Gunicorn + Uvicorn)
-For production, use a production-grade server:
-```bash
-pip install gunicorn
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.api.main:app
+Create a `.env` file in the root directory:
+
+```env
+# API Keys
+GOOGLE_API_KEY=your_gemini_api_key
+
+# JWT Settings
+JWT_SECRET=your_random_secret_string
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+# Database
+CHROMA_DB_PATH=chroma_db
 ```
 
-### Frontend (Next.js Build)
-Always use the production build for better performance:
+---
+
+## 🖥 Usage Guide
+
+### Start the API (Backend)
+```bash
+# From the root directory
+python -m uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+*Docs available at `http://localhost:8000/docs`*
+
+### Start the Dashboard (Frontend)
 ```bash
 cd cv-ai-frontend
-npm run build
-npm run start
+npm run dev
 ```
-
-### Environment Checklist
-Ensure these variables are set in your production environment (e.g., Render/Vercel):
-- `GOOGLE_API_KEY`: Your Gemini API key.
-- `JWT_SECRET`: A long, random string.
-- `ENCRYPTION_KEY`: A Fernet-compatible key (use `cryptography.fernet.Fernet.generate_key()`).
-- `ALLOWED_ORIGINS`: Comma-separated list of your production domains.
-- `NEXT_PUBLIC_API_URL`: Your backend API URL (for the frontend build).
+*Access at `http://localhost:3000`*
 
 ---
 
-### Ingest CVs
+## 📡 API Reference
 
-**Via UI:** Go to `/upload` → drag and drop PDFs → click Upload
-
-**Via CLI:**
-```bash
-python main.py ingest path/to/cvs/
-```
-
-### Search
-
-Natural language queries work best:
-- `"senior React developer with 5 years experience"`
-- `"Python data scientist machine learning"`
-- `"DevOps engineer Kubernetes AWS"`
-
-### Analytics
-
-Go to `/analytics` → select a job requisition → Gap Analysis shows where your pool is strong and where you need to source more talent.
-
-### Outreach
-
-1. Search for candidates
-2. Click **Shortlist** on candidate cards
-3. Go to `/outreach`
-4. Select candidates → **Email** → choose template → **Send**
+| Endpoint | Method | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `/token` | `POST` | Login & get JWT token | Public |
+| `/health` | `GET` | System health & CORS check | Public |
+| `/api/ingest` | `POST` | Upload PDF and index | Admin |
+| `/api/search` | `POST` | Semantic search | Authenticated |
+| `/api/candidates`| `GET` | List all candidates | Authenticated |
 
 ---
 
-## API Endpoints
-
-```
-POST /token                         Login (form-data)
-GET  /health                        Health check
-
-POST /api/ingest                    Upload + index CV
-GET  /api/ingest/stats              DB stats
-DELETE /api/ingest/{id}             Delete candidate
-
-GET  /api/search                    Hybrid search
-GET  /api/candidates                List all candidates
-GET  /api/candidate/{id}            Get candidate profile
-POST /api/candidate/{id}/insights   Generate AI insights
-
-POST /api/email                     Send or schedule email
-
-GET  /api/analytics/overview        Dashboard metrics
-GET  /api/analytics/clusters        Tech clusters
-GET  /api/analytics/similar/{id}    Similar candidates
-GET  /api/analytics/enrich/{id}     Enriched profile
-```
+## 🗺 Roadmap
+- [ ] Multi-tenant support for agencies.
+- [ ] Direct integration with LinkedIn/Indeed APIs.
+- [ ] AI-generated interview question templates.
+- [ ] Email automation for candidate rejection/acceptance.
 
 ---
 
-## Environment Variables
-
-| Variable            | Description                        |
-|---------------------|------------------------------------|
-| `GOOGLE_API_KEY`    | Gemini API key                     |
-| `PREFERRED_MODEL`   | Gemini model name                  |
-| `SECRET_KEY`        | JWT signing secret                 |
-| `ENCRYPTION_KEY`    | Fernet key for email encryption    |
-| `EMAIL_TRACKER_DB`  | Path to SQLite email tracker DB    |
-| `CREDENTIALS_PATH`  | Gmail OAuth2 credentials.json path |
-| `TOKEN_PATH`        | Gmail OAuth2 token.json path       |
+## 🤝 Contributing
+1. Fork the Project.
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the Branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
 ---
 
-## Known Limitations
-
-- Free Gemini API tier: 20 requests/day — upgrade for production use
-- Email sending requires Gmail OAuth2 setup
-- CV extraction works best with text-based PDFs (not scanned images)
-- ChromaDB is local — for production use a managed vector DB
+## 📄 License
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-## License
+## ✉️ Contact
+**Anil Sambyal** - [GitHub](https://github.com/anilsambyal547)
 
-MIT
+Project Link: [https://github.com/your-username/cv-ai](https://github.com/your-username/cv-ai)

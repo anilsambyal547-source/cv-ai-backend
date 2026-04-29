@@ -19,27 +19,17 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["TORCH_NUM_THREADS"] = "1"
 
-app = FastAPI(title="CV AI API", version="1.0.0")
-
-# 1. Diagnostic Health Check
-@app.get("/health", tags=["health"])
-async def health_check(request: Request):
-    return {
-        "status": "ok",
-        "timestamp": time.time(),
-        "cors_debug": {
-            "origin_received": request.headers.get("origin"),
-            "allowed_origins": [o for o in _ALLOWED_ORIGINS if "localhost" not in o] 
-        }
-    }
-
-# 2. Golden Bridge CORS Configuration (Strict & Explicit)
+# 1. CORS origins — must be defined before app and routes
 _ALLOWED_ORIGINS = [
     "https://cvsai.vercel.app",
     "https://cvsai.vercel.app/",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
+app = FastAPI(title="CV AI API", version="1.0.0")
+
+# 2. Golden Bridge CORS Configuration (Strict & Explicit)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
@@ -48,6 +38,18 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# 3. Diagnostic Health Check
+@app.get("/health", tags=["health"])
+async def health_check(request: Request):
+    return {
+        "status": "ok",
+        "timestamp": time.time(),
+        "cors_debug": {
+            "origin_received": request.headers.get("origin"),
+            "allowed_origins": [o for o in _ALLOWED_ORIGINS if "localhost" not in o],
+        }
+    }
 
 # 3. Fast Login (Zero-CPU)
 @app.post("/token", response_model=dict, tags=["authentication"])

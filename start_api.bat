@@ -16,7 +16,5 @@ if exist "venv\Scripts\activate.bat" (
 
 echo [INFO] Starting FastAPI server...
 echo.
-
-uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
-
+venv\Scripts\python.exe -m uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
 pause

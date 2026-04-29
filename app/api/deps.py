@@ -26,7 +26,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = auth.fake_users_db.get(username)
+    user = auth._USER_DB.get(username)
     if user is None:
         raise credentials_exception
     # Add role to returned user dict
