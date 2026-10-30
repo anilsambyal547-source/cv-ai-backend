@@ -26,9 +26,9 @@ _USER_DB = {
 }
 
 def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
-    # Direct comparison for production stability on underpowered CPU
-    user = _USER_DB.get(username)
-    if user and user["password"] == password:
+    # Case-insensitive username + password — works for anyone
+    user = _USER_DB.get(username.strip().lower())
+    if user and user["password"] == password.strip().lower():
         return user
     return None
 
